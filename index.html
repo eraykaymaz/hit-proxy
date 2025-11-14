@@ -2,70 +2,92 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Hit Ürün Test Arayüzü</title>
+<title>Hit Generator Mini</title>
 <style>
-    body { font-family: Arial; background:#f5f5f5; padding:40px; }
-    .box { background:white; padding:20px; border-radius:10px;
-           box-shadow:0 0 10px rgba(0,0,0,0.1); width:480px; }
-    input { width:100%; padding:10px; font-size:16px; margin-bottom:10px; }
-    button { padding:10px 15px; font-size:16px; cursor:pointer; width:100%; }
-    .label { font-weight:bold; margin-top:10px; }
-    img { max-width:100%; border-radius:6px; margin-top:10px; }
-    .ok { color:green; font-weight:bold; }
-    .no { color:red; font-weight:bold; }
+body {
+  background:#0f1115; color:#fff; font-family:Arial; padding:20px;
+}
+h2 { color:#e83c5f; text-align:center; }
+.table { width:100%; border-collapse:collapse; margin-bottom:15px; }
+.table th, .table td {
+  padding:8px; border-bottom:1px solid #333;
+}
+input[type=text] {
+  width:100%; padding:6px; border-radius:6px; border:none; background:#1b1e25; color:#fff;
+}
+button {
+  background:#e83c5f; border:none; padding:10px 16px; border-radius:6px;
+  cursor:pointer; color:#fff; font-weight:bold;
+}
+.product-box {
+  display:flex; align-items:center; gap:10px; background:#1b1e25;
+  padding:10px; border-radius:8px; margin-top:5px;
+}
+.product-box img {
+  width:70px; height:70px; object-fit:contain; background:#000; border-radius:4px;
+}
+.result-area {
+  background:#111317; padding:10px; border-radius:8px; margin-top:10px;
+  font-family:monospace; color:#00ff9c; white-space:pre-wrap;
+}
 </style>
 </head>
 <body>
 
-<div class="box">
-    <h2>🔥 Hit Ürün Test</h2>
+<h2>🔥 Hit Generator Mini (5 Satır)</h2>
 
-    <input id="link" placeholder="Ürün linkini yapıştırın">
-    <button onclick="kontrol()">Kontrol Et</button>
+<table class="table">
+  <tr><th>Ürün Linki</th></tr>
 
-    <div id="sonuc" style="margin-top:20px;"></div>
-</div>
+  <tr><td><input type="text" class="link-input" placeholder="https://..."></td></tr>
+  <tr><td><input type="text" class="link-input" placeholder="https://..."></td></tr>
+  <tr><td><input type="text" class="link-input" placeholder="https://..."></td></tr>
+  <tr><td><input type="text" class="link-input" placeholder="https://..."></td></tr>
+  <tr><td><input type="text" class="link-input" placeholder="https://..."></td></tr>
+</table>
+
+<button onclick="generate()">Kontrol Et</button>
+
+<div id="results"></div>
 
 <script>
-async function kontrol(){
-    const url = document.getElementById("link").value.trim();
-    const sonuc = document.getElementById("sonuc");
+async function fetchData(url){
+  try {
+    const api = "https://yellow-fog-3fba.eray-kaymaz.workers.dev/?url=" + encodeURIComponent(url);
+    const res = await fetch(api);
+    return await res.json();
+  } catch {
+    return { error:true };
+  }
+}
 
-    if(!url){
-        sonuc.innerHTML = "<b style='color:red'>Lütfen ürün linki girin.</b>";
-        return;
-    }
+async function generate() {
+  const inputs = document.querySelectorAll(".link-input");
+  const results = document.getElementById("results");
+  results.innerHTML = "";
 
-    sonuc.innerHTML = "⏳ Kontrol ediliyor...";
+  for (let i = 0; i < inputs.length; i++) {
+    const link = inputs[i].value.trim();
+    if (!link) continue;
 
-    const api = "https://yellow-fog-3fba.eray-kaymaz.workers.dev/?url=" 
-                + encodeURIComponent(url);
+    let data = await fetchData(link);
 
-    try {
-        const res = await fetch(api);
-        const data = await res.json();
-
-        sonuc.innerHTML = `
-            <div class='label'>Başlık:</div>${data.title}<br>
-
-            <div class='label'>Fiyat:</div>${data.price}<br>
-
-            <div class='label'>Kategori:</div>${data.category}<br>
-
-            <div class='label'>Stok:</div>
-                ${data.stock === "VAR" 
-                    ? "<span class='ok'>VAR</span>" 
-                    : "<span class='no'>YOK</span>"}<br>
-
-            <div class='label'>Resim:</div>
-            ${data.image !== "Yok" 
-                ? "<img src='"+data.image+"'>" 
-                : "<span class='no'>Resim bulunamadı</span>"}
-        `;
-    } 
-    catch (e) {
-        sonuc.innerHTML = "<b style='color:red'>Hata: </b>" + e.message;
-    }
+    let html = `
+      <div class="product-box">
+        <img src="${data.image !== 'Yok' ? data.image : ''}" alt="">
+        <div>
+          <div><b>${data.title}</b></div>
+          <div>Fiyat: ${data.price}</div>
+          <div>Kategori: ${data.category}</div>
+          <div>Stok: ${data.stock}</div>
+        </div>
+      </div>
+      <div class="result-area">
+${JSON.stringify(data, null, 2)}
+      </div>
+    `;
+    results.innerHTML += html;
+  }
 }
 </script>
 
