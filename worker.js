@@ -1,4 +1,3 @@
-// Basit HTML scraper + Stok kontrol API
 export default {
   async fetch(request) {
     try {
@@ -6,77 +5,86 @@ export default {
       const target = url.searchParams.get("url");
 
       if (!target) {
-        return new Response(JSON.stringify({ error: "no_url" }), {
-          headers: { "Content-Type": "application/json" }
-        });
+        return new Response("URL parametresi gerekli ?url=", { status: 400 });
       }
 
-      // Render proxy üzerinden çek (CORS bypass)
-      const proxy = "https://hit-proxy.onrender.com/?url=" + encodeURIComponent(target);
-
-      let htmlReq = await fetch(proxy, {
+      const response = await fetch(target, {
         headers: {
           "User-Agent":
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121 Safari/537.36",
+          "Accept": "text/html,application/xhtml+xml",
         },
       });
 
-      let html = await htmlReq.text();
+      const html = await response.text();
 
-      // -----------------------------
-      // ⭐ STOK TESPİTİ
-      // -----------------------------
+      // ---------- JSON CHECK ----------
+      const jsonMatch = html.match(/var productDetailJson\s*=\s*(\{[\s\S]*?\});/);
 
-      let stok = "YOK";
+      let jsonData = null;
+      if (jsonMatch) {
+        try {
+          jsonData = JSON.parse(jsonMatch[1]);
+        } catch {}
+      }
 
-      // ÜRÜN TÜKENDİ yazısı
-      if (html.includes(">Tükendi<")) stok = "YOK";
+      // ---------- TITLE ----------
+      let title = "";
+      const titleMatch = html.match(/<h1[^>]*>(.*?)<\/h1>/);
+      if (titleMatch) title = titleMatch[1].trim();
 
-      // Sepete ekle butonu varsa = stok var
-      if (html.includes("id=\"addToCartBtn\"")) stok = "VAR";
+      // ---------- PRICE ----------
+      let price = "";
+      const priceMatch = html.match(/class="price[^"]*">([^<]+)</);
+      if (priceMatch) price = priceMatch[1].trim();
 
-      // Yedek kontrol (bazı ürünlerde farklı yazıyor)
-      if (html.includes("Sepete Ekle")) stok = "VAR";
+      // ---------- IMAGE ----------
+      let image = "";
+      const imageMatch = html.match(/class="swiper-lazy"[^>]*data-src="([^"]+)"/);
+      if (imageMatch) image = imageMatch[1];
 
-      // -----------------------------
-      // ⭐ ÜRÜN ADI
-      // -----------------------------
+      // ---------- CATEGORY ----------
+      let category = "";
+      const catMatch = html.match(/class="breadcrumb"([\s\S]*?)<\/ol>/);
+      if (catMatch) {
+        category = catMatch[1]
+          .replace(/<[^>]+>/g, "")
+          .replace(/\s+/g, " ")
+          .trim();
+      }
 
-      let titleMatch = html.match(/<h1[^>]*id="product-title"[^>]*>(.*?)<\/h1>/);
-      let title = titleMatch ? titleMatch[1].trim() : null;
+      // ---------- STOCK ----------
+      let stock = "YOK";
 
-      // -----------------------------
-      // ⭐ FİYAT
-      // -----------------------------
-      let priceMatch = html.match(/class="product-price">([\s\S]*?)</);
-      let price = priceMatch ? priceMatch[1].trim() : null;
+      if (html.includes("Tükendi")) {
+        stock = "YOK";
+      } else if (html.includes("addToCartBtn") || html.includes("Sepete Ekle")) {
+        stock = "VAR";
+      } else {
+        stock = "YOK";
+      }
 
-      // -----------------------------
-      // ⭐ RESİM
-      // -----------------------------
-      let imgMatch = html.match(/<img[^>]+class="img-fluid"[^>]+src="([^"]+)"/);
-      let image = imgMatch ? imgMatch[1] : null;
-
-      // JSON output
+      // ---------- OUTPUT ----------
       return new Response(
-        JSON.stringify({
-          durum: stok,
-          baslik: title,
-          fiyat: price,
-          resim: image,
-        }, null, 2),
-        {
-          headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-          }
-        }
+        JSON.stringify(
+          {
+            title,
+            price,
+            image,
+            category,
+            stock,
+            jsonFound: jsonData ? true : false,
+          },
+          null,
+          2
+        ),
+        { headers: { "Content-Type": "application/json" } }
       );
-
     } catch (err) {
-      return new Response(JSON.stringify({ error: err.message }), {
-        headers: { "Content-Type": "application/json" }
-      });
+      return new Response(
+        JSON.stringify({ error: String(err) }),
+        { headers: { "Content-Type": "application/json" } }
+      );
     }
-  }
+  },
 };
