@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Hit Checker</title>
+<style>
+    body {
+        font-family: Arial;
+        background: #fafafa;
+        padding: 40px;
+    }
+    label { font-weight: bold; }
+    input {
+        width: 450px;
+        padding: 8px;
+        font-size: 16px;
+    }
+    button {
+        padding: 10px 15px;
+        font-size: 16px;
+        cursor: pointer;
+    }
+    .box {
+        margin-top: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.05);
+        width: 450px;
+    }
+</style>
+</head>
+<body>
+
+<label>Ürün linki</label><br><br>
+<input id="url" placeholder="https://www.sescibaba.com/...">
+<button onclick="kontrol()">Kontrol Et</button>
+
+<div id="sonuc" class="box"></div>
+
+<script>
+let api = "https://hit-proxy.onrender.com/?url=";  
+// ← Render üzerinden çalışan PROXY
+
+async function kontrol() {
+    let link = document.getElementById("url").value.trim();
+    let sonuc = document.getElementById("sonuc");
+
+    if (!link) {
+        sonuc.innerHTML = "Link girilmedi!";
+        return;
+    }
+
+    sonuc.innerHTML = "Kontrol ediliyor...";
+
+    try {
+        let res = await fetch(api + encodeURIComponent(link));
+        let html = await res.text();
+
+        // JSON arayan eski yöntem yok → artık HTML içinden çekiyoruz
+
+        let title = html.match(/<h1[^>]*id="product-title"[^>]*>(.*?)<\/h1>/s);
+        let fiyat = html.match(/class="product-price">([\d\.]+)</);
+        let stokYok = html.includes("Tükendi") || html.includes("Gelince Haber Ver");
+        let stokVar = html.includes("addToCartBtn");
+
+        let resim = html.match(/<img[^>]*src="([^"]+)"[^>]*class="img-fluid/);
+
+        sonuc.innerHTML = `
+            <b>Başlık:</b> ${title ? title[1] : "Bulunamadı"}<br><br>
+            <b>Fiyat:</b> ${fiyat ? fiyat[1] + " TL" : "Bulunamadı"}<br><br>
+            <b>Stok:</b> 
+                ${stokYok ? "<span style='color:red'>YOK</span>" :
+                stokVar ? "<span style='color:green'>VAR</span>" :
+                "Bilinmiyor"}<br><br>
+            <b>Resim:</b><br>
+            ${resim ? `<img src="${resim[1]}" width="200">` : "Bulunamadı"}
+        `;
+    } 
+    catch (err) {
+        sonuc.innerHTML = "Bir hata oluştu: " + err;
+    }
+}
+</script>
+
+</body>
+</html>
