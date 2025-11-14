@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Auto Slider</title>
+<style>
+body {
+  margin:0; padding:0;
+  background:#0f1115;
+  font-family:Arial;
+}
+.slider-wrap {
+  width:100%;
+  overflow:hidden;
+  padding:20px 0;
+}
+.slider-track {
+  display:flex;
+  gap:20px;
+  animation:scroll 25s linear infinite;
+}
+.slide {
+  min-width:180px;
+  background:#1b1e25;
+  border-radius:8px;
+  padding:10px;
+  text-align:center;
+  color:#fff;
+}
+.slide img {
+  width:150px;
+  height:150px;
+  object-fit:contain;
+  background:#000;
+  border-radius:6px;
+}
+.price {
+  color:#00ff9c; font-weight:bold; margin-top:5px;
+}
+.stock {
+  font-size:12px; margin-top:3px;
+}
+@keyframes scroll {
+  0% { transform:translateX(0); }
+  100% { transform:translateX(-50%); }
+}
+</style>
+</head>
+<body>
+
+<div class="slider-wrap">
+  <div id="track" class="slider-track"></div>
+</div>
+
+<script>
+/* 🔥 ÜRÜN LİSTESİ (Excel'den çektiğin linkleri buraya koy) */
+const urunler = [
+  "https://www.sescibaba.com/xdj-az-4-kanal-profesyonel-dj-controller",
+  "https://www.sescibaba.com/ddj-flx4-decksaver-cover-paket",
+  "https://www.sescibaba.com/origin-condenser-mikrofon-paketi-siyah",
+  "https://www.sescibaba.com/swift-shock-mounth",
+  "https://www.sescibaba.com/ast-swiftshield-pop-filter"
+];
+
+/* 🔥 Worker API'den veri çeken fonksiyon */
+async function getProduct(url){
+  const api = "https://yellow-fog-3fba.eray-kaymaz.workers.dev/?url=" + encodeURIComponent(url);
+  const r = await fetch(api);
+  return await r.json();
+}
+
+/* 🔥 Slider üretimi */
+async function loadSlider() {
+  const track = document.getElementById("track");
+
+  for (let link of urunler) {
+    let d = await getProduct(link);
+
+    let box = `
+      <div class="slide">
+        <a href="${link}" target="_top">
+          <img src="${d.image}">
+          <div>${d.title}</div>
+          <div class="price">${d.price}</div>
+          <div class="stock">Stok: ${d.stock}</div>
+        </a>
+      </div>
+    `;
+
+    track.innerHTML += box;
+  }
+
+  track.innerHTML += track.innerHTML;
+}
+
+loadSlider();
+</script>
+
+</body>
+</html>
